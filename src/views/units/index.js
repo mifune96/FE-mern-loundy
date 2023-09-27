@@ -4,12 +4,16 @@ import LButton from "@components/button";
 import TextInputWithLabel from "@components/text-input-with-label";
 import TableWithPagination from "@components/table";
 import axios from "axios";
+import ModalUnits from "./modal";
 
 export default function PageUnits() {
   const [isFetching, setisFetching] = useState(false);
-  const [filter, setFilter] = useState({ keyword: "", page: 1, size: 1 });
+  const [filter, setFilter] = useState({ keyword: "", page: 1, size: 10 });
   const [data, setData] = useState([]);
   const [count, setCount] = useState(1);
+  const [isModal, setIsModal] = useState(false);
+  const [id, setId] = useState(null);
+
   const onChange = (e) => {
     setFilter({ ...filter, [e.target.name]: e.target.value });
   };
@@ -26,8 +30,35 @@ export default function PageUnits() {
   };
 
   useEffect(() => {
-    getAllUnits();
+    getAllUnits(filter);
   }, [filter.page, filter.size]);
+
+  const renderCell = (row) => {
+    const handleEdit = (id) => {
+      toggle();
+      setId(id);
+    };
+
+    const handleDelete = async (id) => {
+      const res = await axios.delete(
+        `http://localhost:3010/api/v1/cms/units/${id}`
+      );
+      if (res.status === 200) {
+        getAllUnits(filter);
+      }
+    };
+
+    return (
+      <>
+        <LButton className="me-2" size="sm" onClick={() => handleEdit(row.id)}>
+          Edit
+        </LButton>
+        <LButton size="sm" color="danger" onClick={() => handleDelete(row.id)}>
+          Delete
+        </LButton>
+      </>
+    );
+  };
 
   const columns = [
     {
@@ -43,9 +74,11 @@ export default function PageUnits() {
 
     {
       name: "Action",
-      //   cell: (row) => RenderCell(row),
+      cell: (row) => renderCell(row),
     },
   ];
+
+  const toggle = () => setIsModal(!isModal);
 
   return (
     <Card>
@@ -71,7 +104,15 @@ export default function PageUnits() {
             </LButton>
           </Col>
           <Col className="d-flex align-items-end justify-content-end">
-            <LButton onClick={() => alert("test")}>Create</LButton>
+            <ModalUnits
+              open={isModal}
+              toggle={toggle}
+              id={id}
+              getAllUnits={() =>
+                getAllUnits({ keyword: "", page: 1, size: 10 })
+              }
+            />
+            <LButton onClick={() => toggle()}>Create</LButton>
           </Col>
         </Row>
         <TableWithPagination
