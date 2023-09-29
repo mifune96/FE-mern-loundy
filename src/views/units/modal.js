@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import TextInputWithLabel from "@components/text-input-with-label";
 import {
   Modal,
   ModalBody,
@@ -7,39 +6,47 @@ import {
   Row,
   Col,
   ModalFooter,
+  Form,
 } from "reactstrap";
 import LButton from "@components/button";
 import axios from "axios";
+import { useForm, FormProvider } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
+import * as yup from "yup";
+import { TextInputWithLabelR } from "@components/react-hook-form";
+import { getData, postData, putData } from "@src/utility/fetch";
+
+const schema = yup
+  .object({
+    code: yup.string().required(),
+    name: yup.string().required(),
+  })
+  .required();
 
 export default function ModalUnits({ open, toggle, id, getAllUnits }) {
-  const [form, setForm] = useState({ code: "", name: "" });
+  const formHook = useForm({
+    mode: "all",
+    resolver: yupResolver(schema),
+  });
+
   const [isLoading, setIsLoading] = useState(false);
 
-  const onChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
-  const onSubmit = async () => {
+  const onSubmit = async (data) => {
     setIsLoading(true);
     try {
       let res;
       if (id) {
-        res = await axios.put(
-          `http://localhost:3010/api/v1/cms/units/${id}`,
-          form
-        );
+        res = await putData(`/v1/cms/units/${id}`, data);
       } else {
-        res = await axios.post(`http://localhost:3010/api/v1/cms/units`, form);
+        res = await postData(`/v1/cms/units`, data);
       }
-
-      console.log(res);
 
       if (res.status === 200 || res.status === 201) {
         setIsLoading(false);
         getAllUnits();
         toggle();
 
-        setForm({ code: "", name: "" });
+        formHook.reset();
       }
     } catch (err) {
       console.log(err);
@@ -48,9 +55,10 @@ export default function ModalUnits({ open, toggle, id, getAllUnits }) {
   };
 
   const getOneUnit = async () => {
-    const res = await axios.get(`http://localhost:3010/api/v1/cms/units/${id}`);
-
-    setForm({ name: res.data.data.name, code: res.data.data.code });
+    const res = await getData(`/v1/cms/units/${id}`);
+    for (const [key, value] of Object.entries(res.data.data)) {
+      formHook.setValue(key, value);
+    }
   };
 
   useEffect(() => {
@@ -63,35 +71,33 @@ export default function ModalUnits({ open, toggle, id, getAllUnits }) {
     <Modal centered isOpen={open} toggle={toggle} className="modal-md">
       <ModalHeader toggle={toggle}>{id ? "Edit" : "Add"}</ModalHeader>
 
-      <ModalBody>
-        <Row>
-          <Col md={12}>
-            {/* <TextInputWithLabelR label="Code" name="code" /> */}
-            <TextInputWithLabel
-              name="code"
-              label="Code"
-              placeholder="masukkan code"
-              value={form.code}
-              onChange={onChange}
-            />
-          </Col>
-          <Col md={12}>
-            {/* <TextInputWithLabelR label="Name" name="name" /> */}
-            <TextInputWithLabel
-              name="name"
-              label="Name"
-              placeholder="masukkan name"
-              value={form.name}
-              onChange={onChange}
-            />
-          </Col>
-        </Row>
-      </ModalBody>
-      <ModalFooter>
-        <LButton color="primary" onClick={onSubmit} isLoading={isLoading}>
-          Save
-        </LButton>
-      </ModalFooter>
+      <FormProvider {...formHook}>
+        <Form onSubmit={formHook.handleSubmit(onSubmit)}>
+          <ModalBody>
+            <Row>
+              <Col md={12}>
+                <TextInputWithLabelR
+                  name="code"
+                  label="Code"
+                  placeholder="masukkan code"
+                />
+              </Col>
+              <Col md={12}>
+                <TextInputWithLabelR
+                  name="name"
+                  label="Name"
+                  placeholder="masukkan name"
+                />
+              </Col>
+            </Row>
+          </ModalBody>
+          <ModalFooter>
+            <LButton color="primary" type="submit" isLoading={isLoading}>
+              Save
+            </LButton>
+          </ModalFooter>
+        </Form>
+      </FormProvider>
     </Modal>
   );
 }

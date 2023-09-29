@@ -5,6 +5,8 @@ import TextInputWithLabel from "@components/text-input-with-label";
 import TableWithPagination from "@components/table";
 import axios from "axios";
 import ModalUnits from "./modal";
+import { deleteData, getData } from "@src/utility/fetch";
+import Swal from "sweetalert2";
 
 export default function PageUnits() {
   const [isFetching, setisFetching] = useState(false);
@@ -20,9 +22,7 @@ export default function PageUnits() {
 
   const getAllUnits = async (query) => {
     setisFetching(true);
-    const res = await axios.get(
-      `http://localhost:3010/api/v1/cms/units?keyword=${query.keyword}&page=${query.page}&size=${query.size}`
-    );
+    const res = await getData(`/v1/cms/units`, query);
 
     setData(res.data.data.contents);
     setCount(res.data.data.totalPages);
@@ -39,13 +39,30 @@ export default function PageUnits() {
       setId(id);
     };
 
-    const handleDelete = async (id) => {
-      const res = await axios.delete(
-        `http://localhost:3010/api/v1/cms/units/${id}`
-      );
-      if (res.status === 200) {
-        getAllUnits(filter);
-      }
+    const handleDelete = (id) => {
+      Swal.fire({
+        title: "Are you sure?",
+        text: "You won't be able to revert this!",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#3085d6",
+        cancelButtonColor: "#d33",
+        confirmButtonText: "Yes, delete it!",
+      }).then(async (result) => {
+        if (result.isConfirmed) {
+          const res = await deleteData(`/v1/cms/units/${id}`);
+          if (res.status === 200) {
+            getAllUnits(filter);
+          }
+          Swal.fire({
+            position: "center",
+            icon: "success",
+            title: "Your work has been saved",
+            showConfirmButton: false,
+            timer: 1500,
+          });
+        }
+      });
     };
 
     return (
